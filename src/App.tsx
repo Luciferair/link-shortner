@@ -1,8 +1,18 @@
-import React from 'react'
+import { Route, BrowserRouter, Routes } from 'react-router-dom'
+import Home from './pages/Home'
+import Url from './pages/Url'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
-    <div className='text-green-500'>App</div>
+    <BrowserRouter>
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/:id' element={<Url />} />
+        <Route path='/404' element={<NotFound />} />
+        <Route path='*' element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
