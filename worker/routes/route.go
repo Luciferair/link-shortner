@@ -1,60 +1,50 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	store "shortener/store"
-	reqs "shortener/utils"
+	"shortener/store"
+	"shortener/utils"
+
+	"github.com/gofiber/fiber/v3"
 )
 
-func ShortenURLHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(reqs.ErrorResponse{Error: "Invalid request method"})
-		return
-	}
-
-	var req reqs.ShortenRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(reqs.ErrorResponse{Error: "Invalid JSON body"})
-		return
+func ShortenURLHandler(c fiber.Ctx) error {
+	var req utils.ShortenRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid JSON body",
+		})
 	}
 
 	if req.URL == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(reqs.ErrorResponse{Error: "Missing URL parameter"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing URL parameter",
+		})
 	}
 
-	shortID := reqs.GenerateShortID()
-	store.Mu.Lock()
-	store.UrlStore[shortID] = req.URL
-	store.Mu.Unlock()
+	shortID := utils.GenerateShortID()
+	err := store.SetURL(shortID, req.URL)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to store URL",
+		})
+	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reqs.ShortenResponse{
-		ShortURL: fmt.Sprintf("http://localhost:8080/%s", shortID),
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"ShortURL": fmt.Sprintf("http://localhost:5173/%s", shortID),
 	})
 }
 
-func RedirectHandler(w http.ResponseWriter, r *http.Request) {
-	shortID := r.URL.Path[1:]
-
-	store.Mu.Lock()
-	longURL, exists := store.UrlStore[shortID]
-	store.Mu.Unlock()
-
-	if !exists {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(reqs.ErrorResponse{Error: "Short URL not found"})
-		return
+func RedirectHandler(c fiber.Ctx) error {
+	shortID := c.Params("shortID")
+	longURL, err := store.GetURL(shortID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Short URL not found",
+		})
 	}
-	http.Redirect(w, r, longURL, http.StatusFound)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"url": longURL,
+	})
 }

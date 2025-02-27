@@ -1,20 +1,35 @@
 package middleware
 
 import (
-	"encoding/json"
-	"net/http"
-	store "shortener/store"
-	req "shortener/utils"
+	"shortener/utils"
+	"sync"
+
+	"golang.org/x/time/rate"
+
+	"github.com/gofiber/fiber/v3"
 )
 
-func RateLimitMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !store.Limiter.Allow() {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(req.ErrorResponse{Error: "Too Many Requests"})
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+var ipLimiters = make(map[string]*rate.Limiter)
+var mu sync.Mutex
+
+func getLimiter(ip string) *rate.Limiter {
+	mu.Lock()
+	defer mu.Unlock()
+	if limiter, exists := ipLimiters[ip]; exists {
+		return limiter
+	}
+	newLimiter := rate.NewLimiter(1, 5)
+	ipLimiters[ip] = newLimiter
+	return newLimiter
+}
+
+func RateLimitMiddleware(c fiber.Ctx) error {
+	ip := c.IP()
+	limiter := getLimiter(ip)
+	if !limiter.Allow() {
+		return c.Status(fiber.StatusTooManyRequests).JSON(utils.ErrorResponse{
+			Error: "Too Many Requests",
+		})
+	}
+	return c.Next()
 }

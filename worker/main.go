@@ -3,38 +3,40 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net/http"
-	middleware "shortener/middleware"
-	routes "shortener/routes"
+	"shortener/middleware"
+	"shortener/routes"
 	"time"
+
+	"github.com/gofiber/fiber/v3"
 )
-
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.Handle("/shorten", corsMiddleware(middleware.RateLimitMiddleware(http.HandlerFunc(routes.ShortenURLHandler))))
-	mux.Handle("/", corsMiddleware(middleware.RateLimitMiddleware(http.HandlerFunc(routes.RedirectHandler))))
+	app := fiber.New()
+	app.Use(func(c fiber.Ctx) error {
+		c.Set("Access-Control-Allow-Origin", "*")
+		c.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if c.Method() == "OPTIONS" {
+			return c.SendStatus(fiber.StatusNoContent)
+		}
+
+		return c.Next()
+	})
+
+	// Apply rate limiter to all routes
+	app.Use(middleware.RateLimitMiddleware)
+
+	// Routes
+	app.Post("/shorten", routes.ShortenURLHandler)
+	app.Get("/:shortID", routes.RedirectHandler)
 
 	fmt.Println("Server running on :8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := app.Listen(":8080"); err != nil {
 		fmt.Println("Server error:", err)
 	}
 }
