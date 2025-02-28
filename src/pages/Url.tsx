@@ -1,51 +1,44 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
 function Url() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [error, setError] = useState(false)
-  
+
   useEffect(() => {
     const fetchOriginalUrl = async () => {
       try {
+
         const response = await fetch(`http://localhost:8080/${id}`)
         const data = await response.json()
-        
+
         if (!response.ok) {
           throw new Error('URL not found')
         }
-        
-        // Redirect to original URL
-        window.location.href = data.url
+        setTimeout(() => {
+          window.location.href = data.url
+        }, 500)
+
       } catch (err) {
-        console.error('Error fetching URL:', err)
-        setError(true)
-        // Navigate to 404 page after a short delay
         setTimeout(() => {
           navigate('/404', { replace: true })
         }, 1000)
       }
     }
-    
+
     if (id) {
       fetchOriginalUrl()
     }
   }, [id, navigate])
-  
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      {error ? (
-        <div className="text-center">
-          <h2 className="text-xl font-medium text-red-600">URL not found</h2>
-          <p className="text-gray-600 mt-2">Redirecting to error page...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black p-4 text-gray-200">
+      <div className="w-full max-w-sm bg-gray-900 rounded-lg shadow-lg p-6 border border-gray-800 text-center flex flex-col items-center justify-center">
+        <div className="flex items-center justify-center mb-6">
+          <div className="h-16 w-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
-      ) : (
-        <div className="text-center">
-          <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting to your destination...</p>
-        </div>
-      )}
+        <h2 className="text-2xl font-bold mb-2 text-blue-300">Redirecting...</h2>
+      </div>
     </div>
   )
 }
