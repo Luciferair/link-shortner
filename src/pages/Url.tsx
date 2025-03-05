@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
+import { config } from '../config/env'
 
 function Url() {
   const { id } = useParams()
@@ -9,7 +10,7 @@ function Url() {
   useEffect(() => {
     const fetchOriginalUrl = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/${id}`)
+        const response = await fetch(`${config.api}/${id}`)
         const data = await response.json()
 
         if (!response.ok) {

@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"fmt"
 	"shortener/store"
 	"shortener/utils"
 
@@ -31,7 +30,7 @@ func ShortenURLHandler(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"ShortURL": fmt.Sprintf("http://localhost:5173/%s", shortID),
+		"ShortURL": shortID,
 	})
 }
 

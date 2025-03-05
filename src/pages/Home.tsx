@@ -12,6 +12,7 @@ import {
   Clock,
   Info
 } from 'lucide-react'
+import { config } from '../config/env'
 
 function Home() {
   const [url, setUrl] = useState('')
@@ -54,7 +55,7 @@ function Home() {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:8080/shorten', {
+      const response = await fetch(`${config.api}/shorten`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -62,13 +63,17 @@ function Home() {
         body: JSON.stringify({ URL: url })
       })
 
+      console.log(config.api)
+      console.log(config.url_redirect)
+      console.log(response)
+
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to shorten URL')
       }
 
-      setShortUrl(data.ShortURL)
+      setShortUrl(config.url_redirect+data.ShortURL)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
