@@ -17,7 +17,8 @@ func init() {
 func main() {
 	app := fiber.New()
 	app.Use(func(c fiber.Ctx) error {
-		c.Set("Access-Control-Allow-Origin", "*")
+		allowedOrigin := "https://shortify-link-shortener.vercel.app"
+		c.Set("Access-Control-Allow-Origin", allowedOrigin)
 		c.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		c.Set("Access-Control-Allow-Headers", "Content-Type")
 
@@ -28,7 +29,6 @@ func main() {
 		return c.Next()
 	})
 
-	// Apply rate limiter to all routes
 	app.Use(middleware.RateLimitMiddleware)
 
 	// Routes
