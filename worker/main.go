@@ -2,36 +2,42 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	"time"
+	"runtime"
+
 	"shortener/middleware"
 	"shortener/routes"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 func main() {
-	app := fiber.New()
-	app.Use(func(c fiber.Ctx) error {
-		allowedOrigin := "https://shortify-link-shortener.vercel.app"
-		c.Set("Access-Control-Allow-Origin", allowedOrigin)
-		c.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		c.Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if c.Method() == "OPTIONS" {
-			return c.SendStatus(fiber.StatusNoContent)
-		}
-
-		return c.Next()
+	app := fiber.New(fiber.Config{
+		AppName:      "URL Shortener API",
+		Concurrency:  256 * runtime.NumCPU(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		BodyLimit: 1 * 1024,
 	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders: []string{"Content-Type"},
+	}))
 
 	app.Use(middleware.RateLimitMiddleware)
 
 	// Routes
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.SendString("Welcome to the URL Shortener API!")
+	})
+
 	app.Post("/shorten", routes.ShortenURLHandler)
 	app.Get("/:shortID", routes.RedirectHandler)
 
