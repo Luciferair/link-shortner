@@ -1,15 +1,19 @@
 package routes
 
 import (
-	"shortener/store"
+	"shortener/services"
 	"shortener/utils"
 
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 )
 
-func ShortenURLHandler(c fiber.Ctx) error {
-	var req utils.ShortenRequest
-	if err := c.Bind().JSON(&req); err != nil {
+type ShortenRequest struct {
+	URL string `json:"url"`
+}
+
+func ShortenURLHandler(c *fiber.Ctx) error {
+	var req ShortenRequest
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid JSON body",
 		})
@@ -22,7 +26,7 @@ func ShortenURLHandler(c fiber.Ctx) error {
 	}
 
 	shortID := utils.GenerateShortID()
-	err := store.SetURL(shortID, req.URL)
+	err := services.SetURL(shortID, req.URL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to store URL",
@@ -34,9 +38,9 @@ func ShortenURLHandler(c fiber.Ctx) error {
 	})
 }
 
-func RedirectHandler(c fiber.Ctx) error {
+func RedirectHandler(c *fiber.Ctx) error {
 	shortID := c.Params("shortID")
-	longURL, err := store.GetURL(shortID)
+	longURL, err := services.GetURL(shortID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Short URL not found",

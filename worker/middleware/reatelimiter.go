@@ -1,12 +1,11 @@
 package middleware
 
 import (
-	"shortener/utils"
 	"sync"
 
 	"golang.org/x/time/rate"
 
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 )
 
 var ipLimiters = make(map[string]*rate.Limiter)
@@ -23,12 +22,12 @@ func getLimiter(ip string) *rate.Limiter {
 	return newLimiter
 }
 
-func RateLimitMiddleware(c fiber.Ctx) error {
+func RateLimitMiddleware(c *fiber.Ctx) error {
 	ip := c.IP()
 	limiter := getLimiter(ip)
 	if !limiter.Allow() {
-		return c.Status(fiber.StatusTooManyRequests).JSON(utils.ErrorResponse{
-			Error: "Too Many Requests",
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"Error": "Too Many Requests",
 		})
 	}
 	return c.Next()
